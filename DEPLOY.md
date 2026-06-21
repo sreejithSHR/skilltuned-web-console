@@ -12,9 +12,10 @@ set the service's **Root Directory** to `nextjs web console`.
 
 ## 2. Create a Web Service on Render
 - **Environment:** Node
-- **Build command:**
+- **Build command:** (use `db push`, not `migrate deploy` — the schema is maintained
+  with `prisma db push`, so there aren't migration files for every change)
   ```
-  npm install && npx prisma generate && npx prisma migrate deploy && npm run build
+  npm install && npx prisma generate && npx prisma db push && npm run build
   ```
 - **Start command:**
   ```

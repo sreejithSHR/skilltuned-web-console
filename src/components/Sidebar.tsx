@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import Icon, { IconName } from "@/components/Icon";
 
@@ -30,8 +30,18 @@ const roleLabel: Record<string, string> = {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { user, org, logout } = useAuth();
+  const router = useRouter();
+  const { user, org, logout, isAuthenticated, isLoading } = useAuth();
   const [open, setOpen] = useState(false);
+
+  // Auth guard: bounce logged-out visitors to the login page
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) router.replace("/");
+  }, [isLoading, isAuthenticated, router]);
+
+  // Don't render the console chrome for unauthenticated users (prevents the
+  // empty-shell flash before the redirect lands).
+  if (!isAuthenticated) return null;
 
   return (
     <>
