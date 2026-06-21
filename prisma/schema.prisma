@@ -1,0 +1,102 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Org {
+  id            String         @id @default(uuid()) @db.Uuid
+  name          String
+  createdAt     DateTime       @default(now()) @map("created_at")
+  users         User[]
+  headsets      Headset[]
+  scenes        Scene[]
+  broadcastLogs BroadcastLog[]
+  vrUsers       VRUser[]
+  auditLogs     AuditLog[]
+
+  @@map("orgs")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  orgId     String   @db.Uuid @map("org_id")
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  type      String
+  message   String
+  actor     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([orgId, createdAt])
+  @@map("audit_logs")
+}
+
+model VRUser {
+  id        String   @id @default(uuid()) @db.Uuid
+  orgId     String   @db.Uuid @map("org_id")
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  username  String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([username, orgId], name: "username_orgId")
+  @@map("vr_users")
+}
+
+model User {
+  id            String         @id @default(uuid()) @db.Uuid
+  orgId         String         @db.Uuid @map("org_id")
+  org           Org            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  email         String         @unique
+  passwordHash  String         @map("password_hash")
+  role          String         @default("viewer")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  broadcastLogs BroadcastLog[]
+
+  @@map("users")
+}
+
+model Headset {
+  id           String    @id @default(uuid()) @db.Uuid
+  orgId        String    @db.Uuid @map("org_id")
+  org          Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  deviceToken  String    @unique @map("device_token")
+  deviceId     String    @map("device_id")
+  label        String?
+  lastSeen     DateTime? @map("last_seen")
+  currentScene String    @default("L_Lobby") @map("current_scene")
+  batteryLevel Int       @default(100) @map("battery_level")
+  status       String    @default("offline")
+
+  @@unique([deviceId, orgId], name: "deviceId_orgId")
+  @@map("headsets")
+}
+
+model Scene {
+  id          String   @id @default(uuid()) @db.Uuid
+  orgId       String   @db.Uuid @map("org_id")
+  org         Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name         String
+  sceneKey     String   @map("scene_key")
+  description  String?
+  tags         String[] @default([])
+  thumbnailUrl String?  @map("thumbnail_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("scenes")
+}
+
+model BroadcastLog {
+  id               String   @id @default(uuid()) @db.Uuid
+  orgId            String   @db.Uuid @map("org_id")
+  org              Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  sceneKey         String   @map("scene_key")
+  initiatedBy      String   @db.Uuid @map("initiated_by")
+  user             User     @relation(fields: [initiatedBy], references: [id])
+  headsetsTargeted Int      @map("headsets_targeted")
+  timestamp        DateTime @default(now())
+
+  @@map("broadcast_logs")
+}
