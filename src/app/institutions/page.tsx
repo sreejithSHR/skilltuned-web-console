@@ -35,9 +35,11 @@ function AddInstitutionModal({
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const valid = name.trim() && adminEmail.trim() && adminPassword.trim();
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!valid) return;
     setSaving(true);
     const err = await onAdd({ name: name.trim(), adminEmail, adminPassword });
     setSaving(false);
@@ -56,19 +58,19 @@ function AddInstitutionModal({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-cc-text-dim mb-1.5">Admin Email (optional)</label>
+              <label className="block text-xs font-medium text-cc-text-dim mb-1.5">Institution Admin Email</label>
               <input value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="admin@school.edu" className="input-dark" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-cc-text-dim mb-1.5">Admin Password</label>
+              <label className="block text-xs font-medium text-cc-text-dim mb-1.5">Login Password</label>
               <input value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} type="text" placeholder="set a password" className="input-dark" />
             </div>
           </div>
-          <p className="text-[11px] text-cc-text-muted">Add an admin to let this institution sign in. You can leave it blank and add one later.</p>
+          <p className="text-[11px] text-cc-text-muted">This is the institution admin&apos;s login — they use it to manage their own headsets, scenes and students.</p>
           {error && <p className="text-sm text-cc-red">{error}</p>}
           <div className="flex gap-3 justify-end pt-2">
             <button type="button" onClick={onClose} className="btn-ghost">Cancel</button>
-            <button type="submit" className="btn-primary" disabled={!name.trim() || saving}>
+            <button type="submit" className="btn-primary" disabled={!valid || saving}>
               {saving ? "Creating…" : "Create Institution"}
             </button>
           </div>
@@ -94,16 +96,14 @@ export default function InstitutionsPage() {
   const [showAdd, setShowAdd] = useState(false);
 
   const isSuper = user?.role === "superadmin";
-  const canManage = user?.role === "admin" || isSuper;
+  const canManage = isSuper;
 
   const fetchData = useCallback(async () => {
     const res = await api.get<Institution[]>("/orgs");
     if (res.data) setInstitutions(res.data);
-    if (user?.role === "superadmin") {
-      const a = await api.get<GlobalLog[]>("/admin/audit");
-      if (a.data) setGlobalLogs(a.data);
-    }
-  }, [user?.role]);
+    const a = await api.get<GlobalLog[]>("/admin/audit");
+    if (a.data) setGlobalLogs(a.data);
+  }, []);
 
   useEffect(() => {
     if (canManage) {
@@ -140,7 +140,7 @@ export default function InstitutionsPage() {
         <main className="flex-1 flex items-center justify-center">
           <div className="glass-card text-center max-w-sm">
             <p className="text-cc-text font-medium">Not authorized</p>
-            <p className="text-sm text-cc-text-muted mt-1">This area is for institution admins and the super admin.</p>
+            <p className="text-sm text-cc-text-muted mt-1">Only the Super Admin can create and monitor institutions.</p>
           </div>
         </main>
       </div>
@@ -157,12 +157,10 @@ export default function InstitutionsPage() {
             <div className="flex items-center gap-3">
               <div>
                 <h1 className="text-2xl font-bold text-cc-navy tracking-tight">Institutions</h1>
-                <p className="text-sm text-cc-text-muted mt-0.5">
-                  {isSuper ? "Monitoring every institution on the platform" : "Institutions you manage"}
-                </p>
+                <p className="text-sm text-cc-text-muted mt-0.5">Create institutions and monitor every one of them</p>
               </div>
-              <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${isSuper ? "bg-cc-purple/10 text-cc-purple" : "bg-cc-cyan/10 text-cc-cyan"}`}>
-                {isSuper ? "SUPER ADMIN" : "ADMIN"}
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-cc-purple/10 text-cc-purple">
+                SUPER ADMIN
               </span>
             </div>
             <button onClick={() => setShowAdd(true)} className="btn-primary"><Icon name="plus" size={16} /> Add Institution</button>

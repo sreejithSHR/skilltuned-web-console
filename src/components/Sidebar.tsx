@@ -15,7 +15,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
-  { label: "Institutions", href: "/institutions", icon: "institution", roles: ["admin", "superadmin"] },
+  { label: "Institutions", href: "/institutions", icon: "institution", roles: ["superadmin"] },
   { label: "Sessions", href: "/sessions", icon: "sessions" },
   { label: "Scenes", href: "/scenes", icon: "scenes" },
   { label: "Audit Log", href: "/audit", icon: "audit" },

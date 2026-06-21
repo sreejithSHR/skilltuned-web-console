@@ -3,9 +3,9 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 
-// List institutions with monitoring stats — admin & superadmin
+// List institutions with monitoring stats — Super Admin only
 export async function GET(req: NextRequest) {
-  const auth = requireRole(req, ["admin", "superadmin"]);
+  const auth = requireRole(req, ["superadmin"]);
   if (!auth) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const orgs = await prisma.org.findMany({
@@ -34,9 +34,9 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(result);
 }
 
-// Create an institution (+ optional first admin) — admin & superadmin
+// Create an institution + its institution-admin login — Super Admin only
 export async function POST(req: NextRequest) {
-  const auth = requireRole(req, ["admin", "superadmin"]);
+  const auth = requireRole(req, ["superadmin"]);
   if (!auth) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { name, adminEmail, adminPassword } = await req.json();
