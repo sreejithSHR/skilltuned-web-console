@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Icon from "@/components/Icon";
 import { useAuth } from "@/context/AuthContext";
@@ -90,7 +91,8 @@ function Stat({ label, value }: { label: string; value: number }) {
 }
 
 export default function InstitutionsPage() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, enterViewAs } = useAuth();
+  const router = useRouter();
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [globalLogs, setGlobalLogs] = useState<GlobalLog[]>([]);
   const [showAdd, setShowAdd] = useState(false);
@@ -119,6 +121,28 @@ export default function InstitutionsPage() {
     setShowAdd(false);
     fetchData();
     return null;
+  };
+
+  const handleViewAs = async (inst: Institution) => {
+    const res = await api.post<{ token: string; org: { id: string; name: string } }>("/admin/impersonate", { orgId: inst.id });
+    if (res.data) {
+      enterViewAs(res.data.token, { id: res.data.org.id, name: res.data.org.name });
+      router.push("/dashboard");
+    }
+  };
+
+  const handleRename = async (inst: Institution) => {
+    const name = window.prompt("Rename institution", inst.name);
+    if (!name?.trim() || name.trim() === inst.name) return;
+    const res = await api.patch(`/orgs/${inst.id}`, { name: name.trim() });
+    if (!res.error) fetchData();
+  };
+
+  const handleDelete = async (inst: Institution) => {
+    if (!window.confirm(`Delete "${inst.name}" and ALL of its scenes, users and sessions? This cannot be undone.`)) return;
+    const res = await api.delete(`/orgs/${inst.id}`);
+    if (res.error) alert(res.error);
+    else fetchData();
   };
 
   const totals = useMemo(() => {
@@ -198,6 +222,17 @@ export default function InstitutionsPage() {
                   <Stat label="Students" value={inst.counts.vrUsers} />
                   <Stat label="Scenes" value={inst.counts.scenes} />
                   <Stat label="Headsets" value={inst.counts.headsets} />
+                </div>
+                <div className="flex items-center gap-2 mt-4">
+                  <button onClick={() => handleViewAs(inst)} className="btn-primary !py-1.5 !px-3 text-xs flex-1" title="Manage this institution's scenes & sessions">
+                    <Icon name="eye" size={14} /> View as
+                  </button>
+                  <button onClick={() => handleRename(inst)} className="icon-btn !w-8 !h-8" title="Rename">
+                    <Icon name="edit" size={14} />
+                  </button>
+                  <button onClick={() => handleDelete(inst)} className="icon-btn !w-8 !h-8 hover:!text-cc-red" title="Delete institution">
+                    <Icon name="trash" size={14} />
+                  </button>
                 </div>
               </div>
             ))}

@@ -7,6 +7,9 @@ import api from "@/lib/api";
 interface AuthContextType extends AuthState {
   login: (creds: LoginCredentials) => Promise<string | null>;
   logout: () => void;
+  viewingAs: string | null;
+  enterViewAs: (token: string, org: Org) => void;
+  exitViewAs: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,6 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: false,
     isLoading: true,
   });
+  const [viewingAs, setViewingAs] = useState<string | null>(null);
 
   // Restore from localStorage on mount
   useEffect(() => {
@@ -37,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isAuthenticated: true,
           isLoading: false,
         });
+        setViewingAs(localStorage.getItem("cc_viewing_as"));
       } catch {
         localStorage.removeItem("cc_token");
         localStorage.removeItem("cc_user");
@@ -76,9 +81,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem("cc_token");
-    localStorage.removeItem("cc_user");
-    localStorage.removeItem("cc_org");
+    ["cc_token", "cc_user", "cc_org", "cc_super_token", "cc_super_user", "cc_super_org", "cc_viewing_as"].forEach(
+      (k) => localStorage.removeItem(k)
+    );
+    setViewingAs(null);
     setState({
       user: null,
       token: null,
@@ -88,8 +94,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // Super Admin enters an institution's context (impersonation)
+  const enterViewAs = useCallback((token: string, org: Org) => {
+    setState((s) => {
+      if (!s.user) return s;
+      // Stash the super-admin session once, so we can restore it on exit
+      if (!localStorage.getItem("cc_super_token")) {
+        localStorage.setItem("cc_super_token", s.token || "");
+        localStorage.setItem("cc_super_user", JSON.stringify(s.user));
+        localStorage.setItem("cc_super_org", JSON.stringify(s.org));
+      }
+      const impUser: User = { ...s.user, orgId: org.id, role: "admin" };
+      localStorage.setItem("cc_token", token);
+      localStorage.setItem("cc_user", JSON.stringify(impUser));
+      localStorage.setItem("cc_org", JSON.stringify(org));
+      localStorage.setItem("cc_viewing_as", org.name);
+      return { ...s, token, user: impUser, org, isAuthenticated: true };
+    });
+    setViewingAs(org.name);
+  }, []);
+
+  const exitViewAs = useCallback(() => {
+    const superToken = localStorage.getItem("cc_super_token");
+    const superUser = localStorage.getItem("cc_super_user");
+    const superOrg = localStorage.getItem("cc_super_org");
+    if (!superToken || !superUser) return;
+    const user = JSON.parse(superUser) as User;
+    const org = superOrg ? (JSON.parse(superOrg) as Org) : null;
+    localStorage.setItem("cc_token", superToken);
+    localStorage.setItem("cc_user", superUser);
+    if (superOrg) localStorage.setItem("cc_org", superOrg);
+    ["cc_super_token", "cc_super_user", "cc_super_org", "cc_viewing_as"].forEach((k) => localStorage.removeItem(k));
+    setState((s) => ({ ...s, token: superToken, user, org, isAuthenticated: true }));
+    setViewingAs(null);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={{ ...state, login, logout, viewingAs, enterViewAs, exitViewAs }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/context/AuthContext";
+import ViewAsBanner from "@/components/ViewAsBanner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,6 +18,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="antialiased">
         <AuthProvider>
+          <ViewAsBanner />
           <div className="relative min-h-screen z-10">{children}</div>
         </AuthProvider>
       </body>
